@@ -1,10 +1,10 @@
+import os
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 from aioresponses import aioresponses
 from bs4 import BeautifulSoup
 
-from bot import bot
 from bot.bot import (
     check_hash,
     check_outages,
@@ -33,7 +33,7 @@ def test_load_message_list():
     m = mock_open()
     with patch('builtins.open', m), patch('pickle.load') as mocked_load:
         load_message_list()
-        m.assert_called_once_with('data/message_list.pickle', 'rb')
+        m.assert_called_once_with('message_list.pickle', 'rb')
         mocked_load.assert_called_once()
 
 
@@ -50,7 +50,7 @@ def test_check_hash_normal():
     m = mock_open()
     with patch('builtins.open', m) as mocked_open, patch('pickle.dump') as mocked_dump:
         check_hash(message, message_list)
-        m.assert_called_once_with('data/message_list.pickle', 'wb')
+        m.assert_called_once_with('message_list.pickle', 'wb')
         handle = mocked_open()
         mocked_dump.assert_called_once_with(message_list, handle)
 
@@ -60,7 +60,7 @@ async def test_send_message_to_channel_normal(outage_info):
     channel = 'test_channel'
     b = AsyncMock()
     message_list: list[int] = []
-    with patch.object(bot, 'chat', channel):
+    with patch.object(os, 'environ', channel):
         await send_message_to_channel(b, outage_info, message_list)
         b.send_message.assert_called_once()
 
@@ -70,7 +70,7 @@ async def test_send_message_to_channel_exception(outage_info, telegram_message_h
     channel = 'test_channel'
     b = AsyncMock()
     message_list: list[int] = [telegram_message_hash]
-    with patch.object(bot, 'chat', channel):
+    with patch.object(os, 'environ', channel):
         await send_message_to_channel(b, outage_info, message_list)
         b.send_message.assert_not_called()
 
@@ -115,7 +115,7 @@ def test_run():
         mock_bot.assert_called_once()
         mock_schedule.every().hour.do.assert_called_with(
             check_outages,
-            bot=_bot_value,
+            _bot=_bot_value,
             url=planned_url,
             _type=OutageType.planned,
             data=data_value,
