@@ -24,9 +24,9 @@ jobs:
             poetry install
         - name: Run linters and formaters
           run: |
-            flake8 --jobs 4 --statistics --show-source tests bot
-            pylint --jobs 4 --rcfile=setup.cfg tests bot
-            mypy tests bot
-            black --skip-string-normalization --check tests bot
+            .venv/bin/flake8 --jobs 4 --statistics --show-source tests bot
+            .venv/bin/pylint --jobs 4 --rcfile=setup.cfg tests bot
+            .venv/bin/mypy tests bot
+            .venv/bin/black --skip-string-normalization --check tests bot
         - name: Run tests
-          run: pytest -v tests
+          run: .venv/bin/pytest -v tests
