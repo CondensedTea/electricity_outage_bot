@@ -1,0 +1,32 @@
+on:
+ push:
+   tags:
+     - '!refs/tags/*'
+   branches:
+     - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v2
+        - name: Set up Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: '3.x'
+        - name: Install dependencies
+          run: |
+            python -V
+            python -m venv .venv
+            source .venv/bin/activate
+            python -m pip install --upgrade pip
+            python -m pip install poetry
+            poetry install
+        - name: Run linters and formaters
+          run: |
+            flake8 --jobs 4 --statistics --show-source tests bot
+            pylint --jobs 4 --rcfile=setup.cfg tests bot
+            mypy tests bot
+            black --skip-string-normalization --check tests bot
+        - name: Run tests
+          run: pytest -v tests
