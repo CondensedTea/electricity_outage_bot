@@ -106,12 +106,12 @@ def test_run():
     mock_data = MagicMock(return_value=data_value)
     token = 'test'
     _bot_value = 'bot_instance'
-    _bot = MagicMock(token=token, return_value=_bot_value)
+    _bot = MagicMock(return_value=_bot_value)
     schedule = MagicMock()
     with patch('bot.bot.schedule', schedule) as mock_schedule, patch(
         'bot.bot.Bot', _bot
     ) as mock_bot, patch('bot.bot.load_message_list', mock_data):
-        run()
+        run(token)
         mock_bot.assert_called_once()
         mock_schedule.every().hour.do.assert_called_with(
             check_outages,

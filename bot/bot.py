@@ -95,10 +95,10 @@ async def check_outages(_bot: Bot, url: str, _type: str, data: list[int]) -> Non
         await send_message_to_channel(_bot, outage, data)
 
 
-def run() -> None:
+def run(token) -> None:
     logging.info('Bot is running, scheduling tasks...')
     data = load_message_list()
-    bot = Bot(token=os.environ['telegram-token'])
+    bot = Bot(token=token)
     schedule.every().hour.do(
         check_outages,
         _bot=bot,
@@ -112,7 +112,8 @@ def run() -> None:
 
 
 if __name__ == '__main__':
+    token = os.environ['telegram-token']
     loop = asyncio.get_event_loop()
-    run()
+    run(token)
     while True:
         loop.run_until_complete(schedule.run_pending())
