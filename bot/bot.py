@@ -95,10 +95,10 @@ async def check_outages(_bot: Bot, url: str, _type: str, data: list[int]) -> Non
         await send_message_to_channel(_bot, outage, data)
 
 
-def run(token) -> None:
+def run(_token: str) -> None:
     logging.info('Bot is running, scheduling tasks...')
     data = load_message_list()
-    bot = Bot(token=token)
+    bot = Bot(token=_token)
     schedule.every().hour.do(
         check_outages,
         _bot=bot,
