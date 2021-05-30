@@ -29,7 +29,7 @@ planned_url = (
 )
 
 
-chat = os.environ['telegram-chat']
+# chat =
 
 logging.basicConfig(level=logging.INFO)
 
@@ -82,7 +82,7 @@ async def send_message_to_channel(
         check_hash(text, data)
     except MessageAlreadyPosted:
         return
-    await _bot.send_message(chat_id=chat, text=text)
+    await _bot.send_message(chat_id=os.environ['telegram-chat'], text=text)
 
 
 async def check_outages(_bot: Bot, url: str, _type: str, data: list[int]) -> None:

@@ -60,7 +60,7 @@ async def test_send_message_to_channel_normal(outage_info):
     channel = 'test_channel'
     b = AsyncMock()
     message_list: list[int] = []
-    with patch.object(os, 'environ', channel):
+    with patch.object(os, 'environ', return_value=channel):
         await send_message_to_channel(b, outage_info, message_list)
         b.send_message.assert_called_once()
 
@@ -70,7 +70,7 @@ async def test_send_message_to_channel_exception(outage_info, telegram_message_h
     channel = 'test_channel'
     b = AsyncMock()
     message_list: list[int] = [telegram_message_hash]
-    with patch.object(os, 'environ', channel):
+    with patch.object(os, 'environ', return_value=channel):
         await send_message_to_channel(b, outage_info, message_list)
         b.send_message.assert_not_called()
 
