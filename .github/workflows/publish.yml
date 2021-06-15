@@ -17,6 +17,7 @@ jobs:
       - name: Push to Docker Hub
         uses: docker/build-push-action@v2
         with:
-          context: ./bot
           push: true
+          context: .
+          file: bot/Dockerfile
           tags: thegreentea/electricity_outage_bot:latest
