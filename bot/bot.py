@@ -109,7 +109,6 @@ def run(_token: str) -> None:
 
 if __name__ == '__main__':
     token = os.environ['TELEGRAM_TOKEN']
-    logging.info('Token: %s' % token)
     loop = asyncio.get_event_loop()
     run(token)
     while True:
