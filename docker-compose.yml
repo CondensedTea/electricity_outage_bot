@@ -5,8 +5,8 @@ services:
     build:
       context: .
       dockerfile: bot/Dockerfile
-  args:
-    - telegram-token=${telegram-token}
-    - telegram-chat=${telegram-chat}
+    environment:
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      TELEGRAM_CHAT: ${TELEGRAM_CHAT}
     volumes:
       - '.:/opt/app'

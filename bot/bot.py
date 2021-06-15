@@ -78,7 +78,7 @@ async def send_message_to_channel(
         check_hash(text, data)
     except MessageAlreadyPosted:
         return
-    await _bot.send_message(chat_id=os.environ['telegram-chat'], text=text)
+    await _bot.send_message(chat_id=os.environ['TELEGRAM_CHAT'], text=text)
 
 
 async def check_outages(_bot: Bot, url: str, _type: str, data: list[int]) -> None:
@@ -108,7 +108,8 @@ def run(_token: str) -> None:
 
 
 if __name__ == '__main__':
-    token = os.environ['telegram-token']
+    token = os.environ['TELEGRAM_TOKEN']
+    logging.info('Token: %s' % token)
     loop = asyncio.get_event_loop()
     run(token)
     while True:
