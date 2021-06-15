@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: bot/Dockerfile
       args:
-        ENVIRONMENT: ${ENVIRONMENT:-development}
+        telegram-token: "${telegram-token}"
+        telegram-chat: "${telegram-chat}"
     volumes:
       - '.:/opt/app'

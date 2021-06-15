@@ -13,6 +13,7 @@ bs4 = "^0.0.1"
 python-dotenv = "^0.17.1"
 pytest-asyncio = "^0.15.1"
 aioresponses = "^0.7.2"
+pycodestyle = "^2.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.2"

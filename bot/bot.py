@@ -3,17 +3,15 @@ import logging
 import os
 import pickle
 import re
+import time
 
 import aiohttp
 import aioschedule as schedule
 from aiogram import Bot
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
 
 from bot.exceptions import MessageAlreadyPosted
 from bot.models import OutageInfo, OutageType
-
-load_dotenv()
 
 unplanned_url = (
     'https://www.mrsk-cp.ru/local/templates/main/components/bitrix/form.result.new'
@@ -28,8 +26,6 @@ planned_url = (
     '&place=%D0%A2%D0%BE%D0%B2%D0%B0%D1%80%D0%BA%D0%BE%D0%B2%D0%BE&begin_date=today&end_date=today'
 )
 
-
-# chat =
 
 logging.basicConfig(level=logging.INFO)
 
@@ -117,3 +113,4 @@ if __name__ == '__main__':
     run(token)
     while True:
         loop.run_until_complete(schedule.run_pending())
+        time.sleep(0.1)
