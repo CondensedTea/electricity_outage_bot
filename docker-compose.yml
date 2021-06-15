@@ -2,9 +2,8 @@ version: '3'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: bot/Dockerfile
+    image:
+      thegreentea/electricity_outage_bot
     environment:
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
       TELEGRAM_CHAT: ${TELEGRAM_CHAT}
