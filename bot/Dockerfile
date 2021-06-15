@@ -14,7 +14,8 @@ ENV PYTHONUNBUFFERED=on
 ENV PYTHONPATH=/opt/bot
 
 ENV POETRY_VERSION=1.1.5
-ARG ENVIRONMENT=production
+ARG telegram-token
+ARG telegram-chat
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
