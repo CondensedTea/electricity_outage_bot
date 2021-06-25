@@ -65,6 +65,9 @@ db.sqlite3-journal
 instance/
 .webassets-cache
 
+# Pickles:
+.pickle
+
 # Scrapy stuff:
 .scrapy
 
