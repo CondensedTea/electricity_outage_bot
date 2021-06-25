@@ -11,23 +11,14 @@ from aiogram import Bot
 from bs4 import BeautifulSoup
 
 from bot.exceptions import MessageAlreadyPosted
-from bot.models import OutageInfo, OutageType
+from bot.models import Outage, OutageInfo, OutageType
 
-unplanned_url = (
-    'https://www.mrsk-cp.ru/local/templates/main/components/bitrix/form.result.new'
-    '/inform_about_disconnect/unplan_outages.php'
-    '?region=40&district=093778F4-8378-414B-9905-7A145E4F140F'
-    '&place=%D0%9A%D0%BE%D1%80%D0%BE%D0%BA%D0%B8%D0%BD%D0%BE&begin_date=today&end_date=today'
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%d/%m/%y %H:%m:S',
 )
-planned_url = (
-    'https://www.mrsk-cp.ru/local/templates/main/components/bitrix/form.result.new/'
-    'inform_about_disconnect/plan_outages.php'
-    '?region=40&district=093778F4-8378-414B-9905-7A145E4F140F'
-    '&place=%D0%A2%D0%BE%D0%B2%D0%B0%D1%80%D0%BA%D0%BE%D0%B2%D0%BE&begin_date=today&end_date=today'
-)
-
-
-logging.basicConfig(level=logging.INFO)
+logging.getLogger('schedule').propagate = False
 
 
 def load_message_list() -> list[int]:
@@ -36,14 +27,14 @@ def load_message_list() -> list[int]:
     return d
 
 
-async def parse_table_row(row: str, type_: str) -> OutageInfo:
+async def parse_table_row(row: str, outage: Outage) -> OutageInfo:
     [result] = re.findall(
         r'(\d{2}.\d{2}.\d{4})</td><td.+>(\d{2}:\d{2})</td>'
         r'<td.+>(\d{2}.\d{2}.\d{4})</td><.+>(\d{2}:\d{2})</td>',
         row,
     )
     return OutageInfo(
-        type_=type_,
+        type_=outage,
         start_date=result[0],
         start_time=result[1],
         end_date=result[2],
@@ -59,6 +50,7 @@ async def get_html_soup(url: str) -> BeautifulSoup:
 
 
 def check_hash(message: str, message_list: list[int]) -> None:
+    print(message)
     h = hash(message)
     if h in message_list:
         raise MessageAlreadyPosted
@@ -68,42 +60,42 @@ def check_hash(message: str, message_list: list[int]) -> None:
 
 
 async def send_message_to_channel(
-    _bot: Bot, outage: OutageInfo, data: list[int]
+    bot: Bot, outage: OutageInfo, posted_messages: list[int]
 ) -> None:
     text = (
-        f'⚡{outage.type_}⚡\nНачалось в {outage.start_date},'
-        f' {outage.start_time}\nЗакончится в {outage.end_date}, {outage.end_time}'
+        f'⚡{outage.type_.title}⚡'
+        f'Началось {outage.start_date} в {outage.start_time}'
+        f'Закончится {outage.end_date} в {outage.end_time}'
     )
     try:
-        check_hash(text, data)
+        check_hash(text, posted_messages)
     except MessageAlreadyPosted:
         return
-    await _bot.send_message(chat_id=os.environ['TELEGRAM_CHAT'], text=text)
+    await bot.send_message(chat_id=os.environ['TELEGRAM_CHAT'], text=text)
 
 
-async def check_outages(_bot: Bot, url: str, _type: str, data: list[int]) -> None:
-    soup = await get_html_soup(url)
+async def check_outages(bot: Bot, outage: Outage, data: list[int]) -> None:
+    soup = await get_html_soup(outage.url)
     for r in soup.find_all('tr', {'class': 'outages-table__row'}):
         if 'outages-table__row_header' in r['class']:
             continue
-        outage = await parse_table_row(str(r), _type)
-        logging.info('Got a outage! Sending the message...')
-        await send_message_to_channel(_bot, outage, data)
+        outage_info = await parse_table_row(str(r), outage)
+        logging.info('Got an outage! Sending the message...')
+        await send_message_to_channel(bot, outage_info, data)
 
 
 def run(_token: str) -> None:
     logging.info('Bot is running, scheduling tasks...')
     data = load_message_list()
     bot = Bot(token=_token)
-    schedule.every().hour.do(
+    schedule.every(20).minutes.do(
         check_outages,
-        _bot=bot,
-        url=unplanned_url,
-        _type=OutageType.unplanned,
+        bot=bot,
+        outage_type=OutageType.unplanned,
         data=data,
     )
-    schedule.every().hour.do(
-        check_outages, _bot=bot, url=planned_url, _type=OutageType.planned, data=data
+    schedule.every(20).minutes.do(
+        check_outages, bot=bot, outage_type=OutageType.planned, data=data
     )
 
 

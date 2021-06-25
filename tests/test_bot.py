@@ -11,7 +11,6 @@ from bot.bot import (
     get_html_soup,
     load_message_list,
     parse_table_row,
-    planned_url,
     run,
     send_message_to_channel,
 )
@@ -20,7 +19,7 @@ from bot.models import OutageType
 
 
 @pytest.mark.asyncio
-async def test_get_html_soup(load_html_response):
+async def test_get_html_soup(load_html_response, planned_url):
     body = load_html_response.read()
     with aioresponses() as mocked:
         mocked.get(planned_url, status=200, body=body)
@@ -79,14 +78,13 @@ async def test_send_message_to_channel_exception(outage_info, telegram_message_h
 async def test_check_outages(load_html_response, outage_info):
     body = load_html_response.read()
     b = AsyncMock()
-    url = 'test'
     message_list: list[int] = []
     with patch(
         'bot.bot.get_html_soup', return_value=BeautifulSoup(body, 'html.parser')
     ), patch('bot.bot.parse_table_row', return_value=outage_info), patch(
         'bot.bot.send_message_to_channel'
     ) as mock_send_message_to_channel:
-        await check_outages(b, url, OutageType.planned, message_list)
+        await check_outages(b, OutageType.planned, message_list)
         mock_send_message_to_channel.assert_called_once_with(
             b, outage_info, message_list
         )
@@ -104,19 +102,17 @@ def test_check_hash_exception():
 def test_run():
     data_value = 'test_data'
     mock_data = MagicMock(return_value=data_value)
-    token = 'test'
-    _bot_value = 'bot_instance'
-    _bot = MagicMock(return_value=_bot_value)
+    bot_value = 'bot_instance'
+    bot = MagicMock(return_value=bot_value)
     schedule = MagicMock()
     with patch('bot.bot.schedule', schedule) as mock_schedule, patch(
-        'bot.bot.Bot', _bot
+        'bot.bot.Bot', bot
     ) as mock_bot, patch('bot.bot.load_message_list', mock_data):
-        run(token)
+        run('fake_token')
         mock_bot.assert_called_once()
-        mock_schedule.every().hour.do.assert_called_with(
+        mock_schedule.every(20).minutes.do.assert_called_with(
             check_outages,
-            _bot=_bot_value,
-            url=planned_url,
-            _type=OutageType.planned,
+            bot=bot_value,
+            outage_type=OutageType.planned,
             data=data_value,
         )

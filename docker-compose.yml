@@ -5,8 +5,7 @@ services:
     build:
       context: .
       dockerfile: bot/Dockerfile
-    environment:
-      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
-      TELEGRAM_CHAT: ${TELEGRAM_CHAT}
+    env_file:
+      - .env
     volumes:
       - '.:/opt/app'
