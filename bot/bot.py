@@ -127,6 +127,9 @@ def run() -> None:
     schedule.every(20).minutes.do(
         check_outages, bot=bot, outage=OutageType.planned, data=data
     )
+    schedule.every(20).minutes.do(
+        check_outages, bot=bot, outage=OutageType.emergency, data=data
+    )
 
 
 if __name__ == '__main__':
