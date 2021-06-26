@@ -1,9 +1,8 @@
 import pytest
-from unittest.mock import patch
-import os
 
-from bot.models import OutageInfo, OutageType
 from bot.exceptions import MessageUpdateRequired
+from bot.models import OutageInfo, OutageType
+
 
 @pytest.fixture(name='load_html_response')
 def fixture_load_html_response():
@@ -59,11 +58,7 @@ def fixture_generated_message_updated(outage_info_similar):
 
 @pytest.fixture(name='exception_update_required')
 def fixture_exception_update_required():
-    return MessageUpdateRequired(
-        date='01.01.2001',
-        time='2:00',
-        message_id=0
-    )
+    return MessageUpdateRequired(date='01.01.2001', time='2:00', message_id=0)
 
 
 @pytest.fixture(name='planned_url')

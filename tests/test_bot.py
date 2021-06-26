@@ -1,24 +1,24 @@
 import os
+from typing import Dict
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 from aioresponses import aioresponses
 from bs4 import BeautifulSoup
-from typing import Dict
 
 from bot.bot import (
-    is_message_new,
     check_outages,
+    generate_message,
     get_html_soup,
+    is_message_new,
     load_message_history,
     parse_table_row,
     run,
     save_message,
-    generate_message,
     send_message_to_channel,
 )
 from bot.exceptions import MessageAlreadyPosted, MessageUpdateRequired
-from bot.models import OutageType, OutageInfo
+from bot.models import OutageInfo, OutageType
 
 
 @pytest.mark.asyncio
@@ -69,7 +69,7 @@ async def test_is_message_new_update_required(outage_info, outage_info_similar):
 
 def test_save_message(outage_info):
     m = mock_open()
-    message_history = {}
+    message_history: Dict[OutageInfo, int] = {}
     with patch('builtins.open', m) as mocked_open, patch('pickle.dump') as mocked_dump:
         save_message(outage_info, 0, message_history)
         m.assert_called_once_with('message_list.pickle', 'wb')
@@ -84,7 +84,9 @@ async def test_generate_message(outage_info, generated_message):
 
 
 @pytest.mark.asyncio
-async def test_generate_message_updated(outage_info, exception_update_required, generated_message_updated):
+async def test_generate_message_updated(
+    outage_info, exception_update_required, generated_message_updated
+):
     result, _ = await generate_message(outage_info, exception_update_required)
     assert result == generated_message_updated
 
@@ -93,8 +95,10 @@ async def test_generate_message_updated(outage_info, exception_update_required, 
 async def test_send_message_to_channel(outage_info):
     channel = 'test_channel'
     b = AsyncMock()
-    message_history = {}
-    with patch.object(os, 'environ', return_value=channel), patch('bot.bot.save_message'):
+    message_history: Dict[OutageInfo, int] = {}
+    with patch.object(os, 'environ', return_value=channel), patch(
+        'bot.bot.save_message'
+    ):
         await send_message_to_channel(b, outage_info, message_history)
         b.send_message.assert_called_once()
 
@@ -110,11 +114,15 @@ async def test_send_message_to_channel_already_posted(outage_info):
 
 
 @pytest.mark.asyncio
-async def test_send_message_to_channel_update_required(outage_info, outage_info_similar):
+async def test_send_message_to_channel_update_required(
+    outage_info, outage_info_similar
+):
     channel = 'test_channel'
     b = AsyncMock()
     message_history = {outage_info: 0}
-    with patch.object(os, 'environ', return_value=channel), patch('bot.bot.save_message'):
+    with patch.object(os, 'environ', return_value=channel), patch(
+        'bot.bot.save_message'
+    ):
         await send_message_to_channel(b, outage_info_similar, message_history)
         b.edit_message_text.assert_called_once()
 
@@ -143,7 +151,9 @@ def test_run():
     schedule = MagicMock()
     with patch('bot.bot.schedule', schedule) as mock_schedule, patch(
         'bot.bot.Bot', bot
-    ) as mock_bot, patch('bot.bot.load_message_history', mock_data), patch.dict('os.environ', {'TELEGRAM_TOKEN': 'fake_token'}):
+    ) as mock_bot, patch('bot.bot.load_message_history', mock_data), patch.dict(
+        'os.environ', {'TELEGRAM_TOKEN': 'fake_token'}
+    ):
         run()
         mock_bot.assert_called_once()
         mock_schedule.every(20).minutes.do.assert_called_with(

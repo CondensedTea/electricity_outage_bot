@@ -4,7 +4,7 @@ import os
 import pickle
 import re
 import time
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import aiohttp
 import aioschedule as schedule
@@ -53,20 +53,30 @@ async def get_html_soup(url: str) -> BeautifulSoup:
 async def is_message_new(outage: OutageInfo, data: Dict[OutageInfo, int]) -> bool:
     if outage in data:
         raise MessageAlreadyPosted
-    elif data and outage.start_date == list(data)[-1].start_date:
-        raise MessageUpdateRequired(date=outage.start_date, time=outage.start_time, message_id=list(data.values())[-1])
+    if data and outage.start_date == list(data)[-1].start_date:
+        raise MessageUpdateRequired(
+            date=outage.start_date,
+            time=outage.start_time,
+            message_id=list(data.values())[-1],
+        )
     return True
 
 
-def save_message(outage: OutageInfo, message_id: int, data: Dict[OutageInfo, int]):
+def save_message(
+    outage: OutageInfo, message_id: int, data: Dict[OutageInfo, int]
+) -> None:
     data[outage] = message_id
     with open('message_list.pickle', 'wb') as file:
         pickle.dump(data, file)
 
 
-async def generate_message(outage: OutageInfo, exception: MessageUpdateRequired = None) -> Tuple[str, OutageInfo]:
+async def generate_message(
+    outage: OutageInfo, exception: Optional[MessageUpdateRequired] = None
+) -> Tuple[str, OutageInfo]:
     if exception:
-        outage = outage._replace(end_date=exception.new_date, end_time=exception.new_time)
+        outage = outage._replace(
+            end_date=exception.new_date, end_time=exception.new_time
+        )
     return (
         f'⚡{outage.type_.title}⚡'
         f'Началось {outage.start_date} в {outage.start_time}'
@@ -83,7 +93,9 @@ async def send_message_to_channel(
         return
     except MessageUpdateRequired as e:
         text, fixed_outage = await generate_message(outage, e)
-        message = await bot.edit_message_text(chat_id=os.environ['TELEGRAM_CHAT'], text=text, message_id=e.message_id)
+        message = await bot.edit_message_text(
+            chat_id=os.environ['TELEGRAM_CHAT'], text=text, message_id=e.message_id
+        )
         message_history.pop(fixed_outage)
     else:
         text, _ = await generate_message(outage)
