@@ -113,6 +113,6 @@ def test_run():
         mock_schedule.every(20).minutes.do.assert_called_with(
             check_outages,
             bot=bot_value,
-            outage_type=OutageType.planned,
+            outage=OutageType.planned,
             data=data_value,
         )
