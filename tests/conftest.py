@@ -1,7 +1,9 @@
 import pytest
+from unittest.mock import patch
+import os
 
 from bot.models import OutageInfo, OutageType
-
+from bot.exceptions import MessageUpdateRequired
 
 @pytest.fixture(name='load_html_response')
 def fixture_load_html_response():
@@ -26,12 +28,41 @@ def fixture_outage_info():
     )
 
 
-@pytest.fixture(name='telegram_message_hash')
-def fixture_telegram_message_hash(outage_info):
-    return hash(
+@pytest.fixture(name='outage_info_similar')
+def fixture_outage_info_similar():
+    return OutageInfo(
+        type_=OutageType.planned,
+        start_date='00.00.0000',
+        start_time='00:00',
+        end_date='01.01.2001',
+        end_time='2:00',
+    )
+
+
+@pytest.fixture(name='generated_message')
+def fixture_generated_message(outage_info):
+    return (
         f'⚡{outage_info.type_.title}⚡'
         f'Началось {outage_info.start_date} в {outage_info.start_time}'
         f'Закончится {outage_info.end_date} в {outage_info.end_time}'
+    )
+
+
+@pytest.fixture(name='generated_message_updated')
+def fixture_generated_message_updated(outage_info_similar):
+    return (
+        f'⚡{outage_info_similar.type_.title}⚡'
+        f'Началось {outage_info_similar.start_date} в {outage_info_similar.start_time}'
+        f'Закончится {outage_info_similar.end_date} в {outage_info_similar.end_time}'
+    )
+
+
+@pytest.fixture(name='exception_update_required')
+def fixture_exception_update_required():
+    return MessageUpdateRequired(
+        date='01.01.2001',
+        time='2:00',
+        message_id=0
     )
 
 
