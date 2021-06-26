@@ -37,7 +37,7 @@ run:
 
 .PHONY: up
 up:
-	docker-compose up --build
+	docker-compose up --build --detach
 
 .PHONY: down
 down:

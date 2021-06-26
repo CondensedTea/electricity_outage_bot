@@ -50,7 +50,6 @@ async def get_html_soup(url: str) -> BeautifulSoup:
 
 
 def check_hash(message: str, message_list: list[int]) -> None:
-    print(message)
     h = hash(message)
     if h in message_list:
         raise MessageAlreadyPosted
@@ -84,18 +83,18 @@ async def check_outages(bot: Bot, outage: Outage, data: list[int]) -> None:
         await send_message_to_channel(bot, outage_info, data)
 
 
-def run(_token: str) -> None:
+def run(telegram_token: str) -> None:
     logging.info('Bot is running, scheduling tasks...')
     data = load_message_list()
-    bot = Bot(token=_token)
+    bot = Bot(token=telegram_token)
     schedule.every(20).minutes.do(
         check_outages,
         bot=bot,
-        outage_type=OutageType.unplanned,
+        outage=OutageType.unplanned,
         data=data,
     )
     schedule.every(20).minutes.do(
-        check_outages, bot=bot, outage_type=OutageType.planned, data=data
+        check_outages, bot=bot, outage=OutageType.planned, data=data
     )
 
 
