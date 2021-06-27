@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pytest
 
 from bot.exceptions import MessageUpdateRequired
@@ -7,6 +9,12 @@ from bot.models import OutageInfo, OutageType
 @pytest.fixture(name='load_html_response')
 def fixture_load_html_response():
     with open('tests/responses/outage.html') as file:
+        yield file
+
+
+@pytest.fixture(name='load_empty_html_response')
+def fixture_load_empty_html_response():
+    with open('tests/responses/empty.html') as file:
         yield file
 
 
@@ -36,6 +44,18 @@ def fixture_outage_info_similar():
         end_date='01.01.2001',
         end_time='2:00',
     )
+
+
+@pytest.fixture(name='message_history_default')
+def fixture_message_default(outage_info):
+    message_history: Dict[OutageInfo, int] = {outage_info: 0}
+    return message_history
+
+
+@pytest.fixture(name='message_history_empty')
+def fixture_message_history_empty():
+    message_history: Dict[OutageInfo, int] = {}
+    return message_history
 
 
 @pytest.fixture(name='generated_message')

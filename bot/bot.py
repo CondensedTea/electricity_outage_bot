@@ -4,7 +4,7 @@ import os
 import pickle
 import re
 import time
-from typing import Dict, Optional, Tuple
+from typing import AsyncIterator, Dict, Optional, Tuple
 
 import aiohttp
 import aioschedule as schedule
@@ -15,11 +15,11 @@ from bot.exceptions import MessageAlreadyPosted, MessageUpdateRequired
 from bot.models import Outage, OutageInfo, OutageType
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%d/%m/%y %H:%m:S',
+    datefmt='%d/%m/%y %H:%m:%S',
 )
-logging.getLogger('schedule').propagate = False
+logging.getLogger('schedule').propagate = True
 
 
 def load_message_history() -> Dict[OutageInfo, int]:
@@ -48,6 +48,12 @@ async def get_html_soup(url: str) -> BeautifulSoup:
         async with session.get(url) as response:
             html = await response.text()
     return BeautifulSoup(html, 'html.parser')
+
+
+async def get_rows(soup: BeautifulSoup) -> AsyncIterator[str]:
+    for row in soup.find_all('tr', {'class': 'outages-table__row'}):
+        if 'outages-table__row_header' not in row['class']:
+            yield row
 
 
 async def is_message_new(outage: OutageInfo, data: Dict[OutageInfo, int]) -> bool:
@@ -105,11 +111,10 @@ async def send_message_to_channel(
 
 
 async def check_outages(bot: Bot, outage: Outage, data: Dict[OutageInfo, int]) -> None:
+    logging.debug('⚙ Checking if information about outage "%s" posted', outage.title)
     soup = await get_html_soup(outage.url)
-    for r in soup.find_all('tr', {'class': 'outages-table__row'}):
-        if 'outages-table__row_header' in r['class']:
-            continue
-        outage_info = await parse_table_row(str(r), outage)
+    async for row in get_rows(soup):
+        outage_info = await parse_table_row(row, outage)
         logging.info('Got an outage! Sending the message...')
         await send_message_to_channel(bot, outage_info, data)
 
