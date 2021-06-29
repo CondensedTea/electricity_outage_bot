@@ -130,7 +130,7 @@ def run() -> None:
     logging.info('Bot is running')
     data = load_message_history()
     bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
-    schedule.every(2).seconds.do(
+    schedule.every(20).minutes.do(
         check_outages,
         bot=bot,
         outage=OutageType.unplanned,
