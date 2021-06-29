@@ -6,15 +6,17 @@ from aioresponses import aioresponses
 from bs4 import BeautifulSoup
 
 from bot.bot import (
-    check_hash,
     check_outages,
+    generate_message,
     get_html_soup,
-    load_message_list,
-    parse_table_row,
+    is_message_new,
+    load_message_history,
+    parse_soup,
     run,
+    save_message,
     send_message_to_channel,
 )
-from bot.exceptions import MessageAlreadyPosted
+from bot.exceptions import MessageAlreadyPosted, MessageUpdateRequired
 from bot.models import OutageType
 
 
@@ -24,79 +26,113 @@ async def test_get_html_soup(load_html_response, planned_url):
     with aioresponses() as mocked:
         mocked.get(planned_url, status=200, body=body)
         new_soup = await get_html_soup(planned_url)
-        assert isinstance(new_soup, BeautifulSoup)
-        assert new_soup == BeautifulSoup(body, 'html.parser')
+        assert new_soup == str(BeautifulSoup(body, 'html.parser'))
 
 
-def test_load_message_list():
+def test_load_message_history():
     m = mock_open()
     with patch('builtins.open', m), patch('pickle.load') as mocked_load:
-        load_message_list()
+        load_message_history()
         m.assert_called_once_with('message_list.pickle', 'rb')
         mocked_load.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_parse_table_row(load_outage_table, outage_info):
+async def test_parse_soup(load_outage_table, outage_info_empty):
     html = load_outage_table.read()
-    info = await parse_table_row(html, OutageType.planned)
-    assert info == outage_info
-
-
-def test_check_hash_normal():
-    message = 'test_message'
-    message_list: list[int] = []
-    m = mock_open()
-    with patch('builtins.open', m) as mocked_open, patch('pickle.dump') as mocked_dump:
-        check_hash(message, message_list)
-        m.assert_called_once_with('message_list.pickle', 'wb')
-        handle = mocked_open()
-        mocked_dump.assert_called_once_with(message_list, handle)
+    soup = str(BeautifulSoup(html, 'html.parser'))
+    info = await parse_soup(soup, OutageType.planned)
+    assert info == outage_info_empty
 
 
 @pytest.mark.asyncio
-async def test_send_message_to_channel_normal(outage_info):
-    channel = 'test_channel'
+async def test_is_message_new(outage_info, message_history_empty):
+    result = await is_message_new(outage_info, message_history_empty)
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_is_message_new_already_posted(outage_info, message_history_default):
+    with pytest.raises(MessageAlreadyPosted):
+        await is_message_new(outage_info, message_history_default)
+
+
+@pytest.mark.asyncio
+async def test_is_message_new_update_required(
+    outage_info_similar, message_history_default
+):
+    with pytest.raises(MessageUpdateRequired):
+        await is_message_new(outage_info_similar, message_history_default)
+
+
+def test_save_message(outage_info, message_history_empty):
+    m = mock_open()
+    with patch('builtins.open', m) as mocked_open, patch('pickle.dump') as mocked_dump:
+        save_message(outage_info, 0, message_history_empty)
+        m.assert_called_once_with('message_list.pickle', 'wb')
+        handle = mocked_open()
+        mocked_dump.assert_called_once_with(message_history_empty, handle)
+
+
+@pytest.mark.asyncio
+async def test_generate_message(outage_info, generated_message):
+    result, _ = await generate_message(outage_info)
+    assert result == generated_message
+
+
+@pytest.mark.asyncio
+async def test_generate_message_updated(
+    outage_info, exception_update_required, generated_message_updated
+):
+    result, _ = await generate_message(outage_info, exception_update_required)
+    assert result == generated_message_updated
+
+
+@pytest.mark.asyncio
+async def test_send_message_to_channel(outage_info, message_history_empty):
     b = AsyncMock()
-    message_list: list[int] = []
-    with patch.object(os, 'environ', return_value=channel):
-        await send_message_to_channel(b, outage_info, message_list)
+    with patch.object(os, 'environ', return_value='test_channel'), patch(
+        'bot.bot.save_message'
+    ):
+        await send_message_to_channel(b, outage_info, message_history_empty)
         b.send_message.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_send_message_to_channel_exception(outage_info, telegram_message_hash):
-    channel = 'test_channel'
+async def test_send_message_to_channel_already_posted(
+    outage_info, message_history_default
+):
     b = AsyncMock()
-    message_list: list[int] = [telegram_message_hash]
-    with patch.object(os, 'environ', return_value=channel):
-        await send_message_to_channel(b, outage_info, message_list)
+    with patch.object(os, 'environ', return_value='test_channel'):
+        await send_message_to_channel(b, outage_info, message_history_default)
         b.send_message.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_check_outages(load_html_response, outage_info):
+async def test_send_message_to_channel_update_required(
+    outage_info_similar, message_history_default
+):
+    b = AsyncMock()
+    with patch.object(os, 'environ', return_value='test_channel'), patch(
+        'bot.bot.save_message'
+    ):
+        await send_message_to_channel(b, outage_info_similar, message_history_default)
+        b.edit_message_text.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_check_outages(load_html_response, outage_info, message_history_empty):
     body = load_html_response.read()
     b = AsyncMock()
-    message_list: list[int] = []
     with patch(
         'bot.bot.get_html_soup', return_value=BeautifulSoup(body, 'html.parser')
-    ), patch('bot.bot.parse_table_row', return_value=outage_info), patch(
+    ), patch('bot.bot.parse_soup', return_value=outage_info), patch(
         'bot.bot.send_message_to_channel'
     ) as mock_send_message_to_channel:
-        await check_outages(b, OutageType.planned, message_list)
+        await check_outages(b, OutageType.planned, message_history_empty)
         mock_send_message_to_channel.assert_called_once_with(
-            b, outage_info, message_list
+            b, outage_info, message_history_empty
         )
-
-
-def test_check_hash_exception():
-    message = 'test_message'
-    message_list = [hash(message)]
-    m = mock_open()
-    with pytest.raises(MessageAlreadyPosted):
-        with patch('builtins.open', m), patch('pickle.dump'):
-            check_hash(message, message_list)
 
 
 def test_run():
@@ -107,12 +143,14 @@ def test_run():
     schedule = MagicMock()
     with patch('bot.bot.schedule', schedule) as mock_schedule, patch(
         'bot.bot.Bot', bot
-    ) as mock_bot, patch('bot.bot.load_message_list', mock_data):
-        run('fake_token')
+    ) as mock_bot, patch('bot.bot.load_message_history', mock_data), patch.dict(
+        'os.environ', {'TELEGRAM_TOKEN': 'fake_token'}
+    ):
+        run()
         mock_bot.assert_called_once()
         mock_schedule.every(20).minutes.do.assert_called_with(
             check_outages,
             bot=bot_value,
-            outage=OutageType.planned,
+            outage=OutageType.emergency,
             data=data_value,
         )

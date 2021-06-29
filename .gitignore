@@ -144,3 +144,4 @@ cython_debug/
 
 .vscode
 .idea
+/message_list.pickle
