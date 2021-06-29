@@ -19,13 +19,13 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%d/%m/%y %H:%m:%S',
 )
-logging.getLogger('schedule').propagate = True
+logging.getLogger('schedule').propagate = False
 
 
 def load_message_history() -> Dict[OutageInfo, int]:
     with open('message_list.pickle', 'rb') as file:
-        od = pickle.load(file)
-    return od
+        message_history = pickle.load(file)
+    return message_history
 
 
 def save_message(
