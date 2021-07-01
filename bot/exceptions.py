@@ -8,3 +8,7 @@ class MessageUpdateRequired(Exception):
         self.new_date = date
         self.new_time = time
         self.message_id = message_id
+
+
+class OutageNotFound(Exception):
+    pass
