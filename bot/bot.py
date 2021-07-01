@@ -11,7 +11,7 @@ import aioschedule as schedule
 from aiogram import Bot
 from bs4 import BeautifulSoup
 
-from bot.exceptions import MessageAlreadyPosted, MessageUpdateRequired
+from bot.exceptions import MessageAlreadyPosted, MessageUpdateRequired, OutageNotFound
 from bot.models import Outage, OutageInfo, OutageType
 
 logging.basicConfig(
@@ -37,11 +37,14 @@ def save_message(
 
 
 async def parse_soup(soup: str, outage: Outage) -> OutageInfo:
-    [result] = re.findall(
-        r'(\d{2}.\d{2}.\d{4})<.+>(\d{2}:\d{2})</td>'
-        r'<td.+>(\d{2}.\d{2}.\d{4})<.+>(\d{2}:\d{2})</td>',
-        soup,
-    )
+    try:
+        [result] = re.findall(
+            r'(\d{2}.\d{2}.\d{4})<.+>(\d{2}:\d{2})</td>.*'
+            r'<td.+>(\d{2}.\d{2}.\d{4})<.+>(\d{2}:\d{2})</td>',
+            soup,
+        )
+    except ValueError as e:
+        raise OutageNotFound from e
     return OutageInfo(
         type_=outage,
         start_date=result[0],
@@ -121,7 +124,10 @@ async def send_message_to_channel(
 
 async def check_outages(bot: Bot, outage: Outage, data: Dict[OutageInfo, int]) -> None:
     soup = await get_html_soup(outage.url)
-    outage_info = await parse_soup(soup, outage)
+    try:
+        outage_info = await parse_soup(soup, outage)
+    except OutageNotFound:
+        return
     logging.info('Got an outage!')
     await send_message_to_channel(bot, outage_info, data)
 
