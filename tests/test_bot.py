@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 from aioresponses import aioresponses
-from bs4 import BeautifulSoup
 
 from bot.bot import (
     check_outages,
@@ -19,6 +18,8 @@ from bot.bot import (
 from bot.exceptions import MessageAlreadyPosted, MessageUpdateRequired, OutageNotFound
 from bot.models import OutageType
 
+# from bs4 import BeautifulSoup
+
 
 @pytest.mark.asyncio
 async def test_get_html_soup(load_html_response, planned_url):
@@ -26,7 +27,7 @@ async def test_get_html_soup(load_html_response, planned_url):
     with aioresponses() as mocked:
         mocked.get(planned_url, status=200, body=body)
         new_soup = await get_html_soup(planned_url)
-        assert new_soup == str(BeautifulSoup(body, 'html.parser'))
+        assert new_soup == body
 
 
 def test_load_message_history():
@@ -40,17 +41,15 @@ def test_load_message_history():
 @pytest.mark.asyncio
 async def test_parse_soup(load_outage_table, outage_info_empty):
     html = load_outage_table.read()
-    soup = str(BeautifulSoup(html, 'html.parser'))
-    info = await parse_soup(soup, OutageType.planned)
+    info = await parse_soup(html, OutageType.planned)
     assert info == outage_info_empty
 
 
 @pytest.mark.asyncio
 async def test_parse_soup_outage_not_found(load_empty_html_response):
     html = load_empty_html_response.read()
-    soup = str(BeautifulSoup(html, 'html.parser'))
     with pytest.raises(OutageNotFound):
-        await parse_soup(soup, OutageType.planned)
+        await parse_soup(html, OutageType.planned)
 
 
 @pytest.mark.asyncio
@@ -129,14 +128,11 @@ async def test_send_message_to_channel_update_required(
 
 
 @pytest.mark.asyncio
-async def test_check_outages(load_html_response, outage_info, message_history_empty):
-    body = load_html_response.read()
+async def test_check_outages(outage_info, message_history_empty):
     b = AsyncMock()
-    with patch(
-        'bot.bot.get_html_soup', return_value=BeautifulSoup(body, 'html.parser')
-    ), patch('bot.bot.parse_soup', return_value=outage_info), patch(
-        'bot.bot.send_message_to_channel'
-    ) as mock_send_message_to_channel:
+    with patch('bot.bot.get_html_soup'), patch(
+        'bot.bot.parse_soup', return_value=outage_info
+    ), patch('bot.bot.send_message_to_channel') as mock_send_message_to_channel:
         await check_outages(b, OutageType.planned, message_history_empty)
         mock_send_message_to_channel.assert_called_once_with(
             b, outage_info, message_history_empty
@@ -144,16 +140,11 @@ async def test_check_outages(load_html_response, outage_info, message_history_em
 
 
 @pytest.mark.asyncio
-async def test_check_outages_outage_not_found(
-    load_empty_html_response, message_history_empty
-):
-    body = load_empty_html_response.read()
+async def test_check_outages_outage_not_found(message_history_empty):
     b = AsyncMock()
-    with patch(
-        'bot.bot.get_html_soup', return_value=BeautifulSoup(body, 'html.parser')
-    ), patch('bot.bot.parse_soup', side_effect=OutageNotFound), patch(
-        'bot.bot.send_message_to_channel'
-    ) as mock_send_message_to_channel:
+    with patch('bot.bot.get_html_soup'), patch(
+        'bot.bot.parse_soup', side_effect=OutageNotFound
+    ), patch('bot.bot.send_message_to_channel') as mock_send_message_to_channel:
         await check_outages(b, OutageType.planned, message_history_empty)
         mock_send_message_to_channel.assert_not_called()
 

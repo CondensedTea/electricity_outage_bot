@@ -9,7 +9,6 @@ from typing import Dict, Optional, Tuple
 import aiohttp
 import aioschedule as schedule
 from aiogram import Bot
-from bs4 import BeautifulSoup
 
 from bot.exceptions import MessageAlreadyPosted, MessageUpdateRequired, OutageNotFound
 from bot.models import Outage, OutageInfo, OutageType
@@ -58,8 +57,7 @@ async def get_html_soup(url: str) -> str:
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             html = await response.text()
-    soup_as_text = str(BeautifulSoup(html, 'html.parser'))
-    return soup_as_text
+    return html
 
 
 async def is_message_new(new_outage: OutageInfo, data: Dict[OutageInfo, int]) -> bool:
@@ -148,7 +146,7 @@ def run() -> None:
     schedule.every(20).minutes.do(
         check_outages, bot=bot, outage=OutageType.emergency, data=data
     )
-    logging.info('Initial tasks was started')
+    logging.info('Initial tasks were started')
 
 
 if __name__ == '__main__':
