@@ -4,7 +4,7 @@ import os
 import pickle
 import re
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Type
 
 import aiohttp
 import aioschedule as schedule
@@ -14,7 +14,7 @@ from bot.exceptions import MessageAlreadyPosted, MessageUpdateRequired, OutageNo
 from bot.models import Outage, OutageInfo, OutageType
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=os.environ.get('LOGLEVEL', 'INFO').upper(),
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%d/%m/%y %H:%m:%S',
 )
@@ -120,14 +120,18 @@ async def send_message_to_channel(
         save_message(outage, message.message_id, message_history)
 
 
-async def check_outages(bot: Bot, outage: Outage, data: Dict[OutageInfo, int]) -> None:
+async def check_outages(
+    bot: Bot, outage: Outage, data: Dict[OutageInfo, int]
+) -> Type[schedule.CancelJob]:
     soup = await get_html_soup(outage.url)
     try:
         outage_info = await parse_soup(soup, outage)
     except OutageNotFound:
-        return
+        logging.debug('Outage not found, skipping')
+        return schedule.CancelJob
     logging.info('Got an outage!')
     await send_message_to_channel(bot, outage_info, data)
+    return schedule.CancelJob
 
 
 def run() -> None:
